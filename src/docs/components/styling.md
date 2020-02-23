@@ -5,117 +5,184 @@ url: /docs/styling
 contributors:
   - jthoms1
   - shreeshbhat
+  - danbucholtz
 ---
 
 # Styling Components
 
+Styling and theming are first class citizens in Stencil with support built directly into the compiler. Components use standard CSS for styling. The CSS file to be used is specified in the [Component Decorator](). Common CSS post processors like Sass or less are supported via [plugins]().
+
+Since components use CSS, they're simple and fun to style. By default in Stencil, CSS works just like it does in the browser or on any website - with global selectors that apply to the entire document. To make components more robust, Stencil offers two methods of "scoping" CSS or encapsulating styles to a specific component. The recommended method of scoping CSS is called Shadow DOM.
+
+
 ## Shadow DOM
+
+Shadow DOM is the recommended approach for styling Stencil components. It is a part of the Web Component specification and provides a great developer experience by enabling developer's to write very simple selectors for their components without worrying about collisions between components.
 
 ### What is Shadow DOM
 
-[Shadow DOM](https://developers.google.com/web/fundamentals/web-components/shadowdom) is an API built into the browser that allows for DOM encapsulation and style encapsulation. Shadow DOM shields our component from its surrounding environment. This means that we do not need to be concerned about scoping our CSS correctly, nor worry about our internal DOM being interfered with by anything outside our component.
+[Shadow DOM](https://developers.google.com/web/fundamentals/web-components/shadowdom) is an API built into the browser that allows for DOM encapsulation and style encapsulation. Shadow DOM shields our component from its surrounding environment. What this means is that the interal implementation of a component remains just that - internal. CSS from the outside world does not cross over or interfere with the Shadow DOM CSS. Consumers of a component are discouraged from 
 
-### Browser Support
-
-Shadow DOM is currently natively supported in the following browsers:
-
-- Chrome
-- Firefox
-- Safari
-- Opera
-
-In browsers which do not support Shadow DOM we fall back to scoped CSS. This gives you the style encapsulation that comes along with Shadow DOM but without loading in a huge Shadow DOM polyfill.
-
-> Confused about what scoped CSS is? Don't worry, we will [explain this later](#scoped-css) in detail.
-
-### Shadow DOM in Stencil
+### Using Shadow DOM
 
 Shadow DOM is not currently turned on by default for web components built with Stencil. To turn on Shadow DOM in a web component built with Stencil, you can use the `shadow` param in the component decorator. Below is an example of this:
 
 ```tsx
 @Component({
-  tag: 'shadow-component',
-  styleUrl: 'shadow-component.css',
+  tag: 'my-component',
+  styleUrl: 'my-component.css',
   shadow: true
 })
-export class ShadowComponent {
+export class MyComponent {
 
 }
 ```
 
-### Things to remember with Shadow DOM
-
-- QuerySelector: When using Shadow DOM and you want to query an element inside your web component you must use `this.el.shadowRoot.querySelector()`. This is because all of your DOM inside your web component is in a shadowRoot that Shadow DOM creates.
-
-- Global Styles: To externally style a component with Shadow DOM you must use [CSS Custom Properties](https://developer.mozilla.org/en-US/docs/Web/CSS/Using_CSS_variables) or the proposed [CSS Shadow Parts](https://meowni.ca/posts/part-theme-explainer/).
-
-- Normally you would wrap your styles in the tag name of the component like so:
+From there, in `my-component.css`, write CSS as you normally would for a component. Since styles from the outside world do not impact the Shadow DOM, things like fonts, sizings, colors, etc are typically set in the `:host` selector using CSS variables. Here is an example:
 
 ```css
-my-element {
-  color: black;
-}
-my-element div {
-  background: blue;
-}
-```
 
-With Shadow DOM enabled, elements within the shadow root are scoped, and styles outside of the component do not apply. As a result, CSS selectors inside the component can be simplified, and the above example could be:
-
-```css
 :host {
-  color: black;
+  display: block;
+  font-family: var(--fonts);
+  box-sizing: border-box;
+  contain: content;
 }
-div {
-  background: blue;
+
+```
+
+The css above is a typical `:host` selector you'll use. It sets the host element to be `display: block` so it acts like any other div. It passes in typography or font-family information from the `--fonts` CSS variable. It sets the `box-sizing` model to `border-box`. It also sets CSS contaiment to `content` for improved performance.
+
+Let's take our above example a step further.
+
+```tsx
+@Component({
+  tag: 'my-component',
+  styleUrl: 'my-component.css',
+  shadow: true
+})
+export class MyComponent {
+
+  render() {
+    return (
+      <div class="container">
+        My name is <span>Neo</span>
+      </div>
+    )
+  }
 }
 ```
 
-### Scoped CSS
-
-In browsers that do not currently support Shadow DOM, web components built with Stencil will fall back to using scoped CSS instead of loading a large Shadow DOM polyfill. Scoped CSS automatically scopes CSS to an element by appending each of your styles with a data attribute at run time.
-
-## CSS Variables
-
-### What are CSS Variables?
-
-[CSS Variables](https://developer.mozilla.org/en-US/docs/Web/CSS/Using_CSS_variables) are a lot like [Sass Variables](https://ionicframework.com/docs/theming/sass-variables/), but built into the browser. CSS Variables allow you to specify CSS properties that can be used across your app.
-
-### Use Case
-
-One use case for CSS Variables is colors. If your app has a primary brand color that is used across your app then instead of writing that same color out each place you need it in your app you can create a variable for it and then use that variable anywhere you need that color in your app. Also, if you ever need to change this color you will only have to change the variable and then it will be updated across your app.
-
-### Using CSS Variables in Stencil
-
-Here are the recommended steps to use CSS Variables in Stencil:
-
-- Create a CSS file to hold your variable definitions. We normally recommend creating a `variables.css` file in `src/global/`
-- You can then put this config `globalStyle: 'src/global/variables.css'` into your `stencil.config.ts` file.
-
-That's it! Now you can start defining your variables.
-
-### Defining CSS Variables
-
-Here is an example of defining a CSS Variable:
+The corresponding css would look like this:
 
 ```css
-/* inside our src/global/variables.css file */
 
-:root {
-  --app-primary-color: #488aff;
+:host {
+  display: block;
+  font-family: var(--fonts);
+  box-sizing: border-box;
+  contain: content;
 }
+
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+span {
+  color: red;
+}
+
 ```
 
-In this example we have defined a CSS Variable called `--app-primary-color` that is set to the color `#488aff`. The `:root` selector in this example is a [CSS pseudo-class](https://developer.mozilla.org/en-US/docs/Web/CSS/:root) that defines the variable on the root element of your project (usually `<html>`) so that the variable can be used across your app.
+As you can see above, the CSS selectors can be very simple because Shadow DOM keeps other CSS from colliding.
 
-### Using a CSS Variable
+### Using CSS Variables with Shadow DOM
 
-Here is an example of using the CSS Variable that we defined above:
+CSS Variables, or [CSS Custom Properties](https://developer.mozilla.org/en-US/docs/Web/CSS/Using_CSS_variables), are a part of the CSS 4 spec. CSS Variables enable developers to style internal details of the component from outside of the component. Here's an example
+
+Here's a sample global CSS file included in an app's html page.
 
 ```css
-h1 {
-  color: var(--app-primary-color)
-}
+
+--primary-color: red;
+
 ```
 
-This will apply the color we defined in our CSS Variable, in this case `#488aff`, to our `h1` element.
+Looking at the `my-component.css` again, here's how it could be implemented to use CSS variables to be more flexible:
+
+```css
+
+:host {
+  display: block;
+  font-family: var(--fonts);
+  box-sizing: border-box;
+  contain: content;
+}
+
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+span {
+  color: var(--primary-color);
+}
+
+```
+
+In the above snippet, the `color: red` code was replaced with `color: var(--primary-color)`. This makes the code more flexible and enables any consumer of the component to override the style of the component from outside by simply setting the value of the `--primary-color` variable.
+
+#### CSS Variable Best Practices
+
+Typically, components add a `:host` style selector that is very similar for all components. In addition to initializing things like fonts, `:host` is the perfect place to specify the default values of all of the CSS Variables that your component uses.
+
+```css
+
+:host {
+  display: block;
+  font-family: var(--fonts);
+  box-sizing: border-box;
+  contain: content;
+  --text-color: var(--primary-color);
+  --font-size: 24px;
+  ---padding: 10px;
+}
+
+.container {
+  padding: var(--padding);
+}
+
+span {
+  color: var(--text-color);
+  font-size: var(--font-size);
+}
+
+```
+
+In the above example, we set the default values of `--text-color`, `--font-size` and `--pading` variables.
+
+The Stencil team recommends creating a CSS file at `src/global/variables.css` to hold all of your common, top-level variables such as colors `--primary-color`, `--secondary-color`, etc and other commonly used variables (such as `--font` in the above examples). After this file exists, we recommend setting `globalStyle: 'src/global/variables.css'` in the stencil.config.ts` file.
+
+As design systems grow, all branding colors, typography information, margins, borders, etc are exposed as CSS Variables to make it easy to build robust, maintainable components.
+
+
+### Shadow DOM Considerations
+
+Shadow DOM is designed to keep the private implementation details of your component shielded or hidden from outside consumers. That is the intent of the API. In simpler terms, that means that when attempting to use an element like `querySelector` to query an node inside of the Shadow DOM, it will not work. You would first need to query the component's `shadowRoot` element. In the case of `my-component` above, you'd be able to do something like this.
+
+```js
+
+const myComponentRoot = document.querySelector('my-component').shadowRoot;
+const containerElement = myComponentRoot.querySelector('.container');
+```
+
+While the above code works, it is generally considered an anti-pattern for one component to know about another component's internal implementation details. If one component needs to know or check if a different component is in a given state, [Events]() are the recommended way of achieving that.
+
+### Fallback to Scoped CSS
+
+While Shadow DOM is available in all modern, evengreen browsers, it is not available without a polyfill in older browsers like Internet Explorer 11. When Stencil compiles your source code, it automatically translates Shadow DOM CSS selectors into CSS that is scoped to a specific component *without* Shadow DOM for older browsers. Note: Stencil will automatically determine whether to load the Shadow DOM bundle, or fallback to the Scoped CSS bundle. As a developer, this is not something you need to worry about because Stencil takes care of it for you automatically.
+
+If you don't wish to use Shadow DOM and would prefer to use scoped CSS, the property `scoped: true` can be set in the Component Decorator, though this is not recommended.
